@@ -5,7 +5,7 @@ const contactInfo = [
     icon: Mail,
     label: 'Email',
     value: 'ceo@besttownrealty.ae',
-    link: 'mailto:ceo@besttownrealty.ae',
+    link: 'mailto:ceo@bestownrealty.ae',
   },
   {
     icon: Phone,
@@ -23,7 +23,7 @@ const contactInfo = [
     icon: Globe,
     label: 'Website',
     value: 'Best Town Realty - Global Associates',
-    link: 'https://besttownrealty.ae',
+    link: 'https://www.bestownrealty.ae/',
   },
 ];
 
