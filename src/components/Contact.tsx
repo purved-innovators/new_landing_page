@@ -4,7 +4,7 @@ const contactInfo = [
   {
     icon: Mail,
     label: 'Email',
-    value: 'ceo@besttownrealty.ae',
+    value: 'ceo@bestownrealty.ae',
     link: 'mailto:ceo@bestownrealty.ae',
   },
   {
