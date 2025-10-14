@@ -72,9 +72,8 @@ export default function HowItWorks() {
             >
               Global Associates Referral Program
             </motion.span>
-            <span className="block mt-2 text-white">How It Works</span>
           </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-3xl mx-auto px-4">
+          <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-3xl mx-auto px-4 leading-relaxed">
             The Global Associates Referral Program connects international real estate professionals with Dubai's thriving property market through a simple three-step process:
           </p>
         </motion.div>
@@ -90,46 +89,51 @@ export default function HowItWorks() {
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.6, delay: index * 0.2 }}
               >
-                <div className="flex flex-col items-center text-center group">
-                  <motion.div
-                    className="relative mb-6 sm:mb-8"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
+                <div className="flex flex-col group h-full">
+                  {/* Icon and Number */}
+                  <div className="flex justify-center mb-6 sm:mb-8">
                     <motion.div
-                      className="absolute inset-0 bg-gradient-to-br from-[#C0C0C0]/30 to-[#cbcccd]/30 rounded-full blur-2xl"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [0.5, 0.8, 0.5],
-                      }}
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      }}
-                    ></motion.div>
-                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-gradient-to-br from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] rounded-full flex items-center justify-center shadow-2xl border-4 border-slate-800 group-hover:shadow-[#C0C0C0]/50 transition-all duration-300">
-                      <Icon className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-slate-900" />
-                    </div>
-                    <motion.div
-                      className="absolute -top-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] text-slate-900 rounded-full flex items-center justify-center font-bold text-sm sm:text-base shadow-lg border-2 border-slate-800"
-                      initial={{ scale: 0 }}
-                      animate={isInView ? { scale: 1 } : {}}
-                      transition={{ type: "spring", stiffness: 500, delay: index * 0.2 + 0.5 }}
+                      className="relative"
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ type: "spring", stiffness: 300 }}
                     >
-                      {index + 1}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-br from-[#C0C0C0]/30 to-[#cbcccd]/30 rounded-full blur-2xl"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.5, 0.8, 0.5],
+                        }}
+                        transition={{
+                          duration: 3,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                      ></motion.div>
+                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 bg-gradient-to-br from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] rounded-full flex items-center justify-center shadow-2xl border-4 border-slate-800 group-hover:shadow-[#C0C0C0]/50 transition-all duration-300">
+                        <Icon className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-slate-900" />
+                      </div>
+                      <motion.div
+                        className="absolute -top-2 -right-2 w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] text-slate-900 rounded-full flex items-center justify-center font-bold text-sm sm:text-base shadow-lg border-2 border-slate-800"
+                        initial={{ scale: 0 }}
+                        animate={isInView ? { scale: 1 } : {}}
+                        transition={{ type: "spring", stiffness: 500, delay: index * 0.2 + 0.5 }}
+                      >
+                        {index + 1}
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
+                  </div>
 
-                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4">
-                    Step {index + 1}:{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd]">
-                      {step.title}
-                    </span>
-                  </h3>
-                  <p className="text-slate-300 leading-relaxed text-sm sm:text-base lg:text-lg px-2 sm:px-4">
-                    {step.description}
-                  </p>
+                  {/* Title and Description */}
+                  <div className="flex flex-col flex-1 w-full">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6 text-center">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd]">
+                        {step.title}
+                      </span>
+                    </h3>
+                    <p className="text-slate-300 leading-relaxed text-sm sm:text-base lg:text-lg text-justify flex-1">
+                      {step.description}
+                    </p>
+                  </div>
                 </div>
 
                 {index < steps.length - 1 && (
@@ -149,7 +153,7 @@ export default function HowItWorks() {
           })}
         </div>
 
-        <div className="md:hidden flex justify-center mt-10 space-x-4">
+        <div className="md:hidden flex justify-center mt-8 sm:mt-10 space-x-4">
           {steps.map((_, index) => (
             index < steps.length - 1 && (
               <motion.div

@@ -61,7 +61,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 w-full">
         <div className="text-center max-w-5xl mx-auto">
-          <motion.div
+          {/* <motion.div
             className="inline-block mb-6 sm:mb-8"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -74,7 +74,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
               </span>
               Limited Seats Available for First Global Batch
             </span>
-          </motion.div>
+          </motion.div> */}
 
           <motion.h1
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-6 sm:mb-8 leading-tight"
@@ -83,7 +83,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <span className="block text-white mb-2 sm:mb-3">
-              Global Associates Referral Program:
+             Best Town Global Associates :
             </span>
             <span className="block">Your Gateway to</span>
             <span className="block mt-2 relative">
