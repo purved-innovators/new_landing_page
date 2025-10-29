@@ -28,7 +28,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
 
   return (
     <section className="relative bg-gradient-to-br from-black via-[#1a1a1a] to-[#111111] text-white overflow-hidden min-h-screen flex items-center">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyMDMsMjA0LDIwNSwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20"></div>
+<div className="absolute inset-0 bg-[url('/img3.jpg')] bg-cover bg-center opacity-50"></div>
 
       <motion.div
         className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#C0C0C0] to-transparent"
@@ -61,31 +61,17 @@ export default function Hero({ onGetStarted }: HeroProps) {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 w-full">
         <div className="text-center max-w-5xl mx-auto">
-          {/* <motion.div
-            className="inline-block mb-6 sm:mb-8"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <span className="inline-flex items-center px-4 py-2 sm:px-6 sm:py-3 rounded-full text-xs sm:text-sm font-medium bg-gradient-to-r from-[#C0C0C0]/10 to-[#cbcccd]/10 text-[#e3e3e3] border border-[#C0C0C0]/30 shadow-lg backdrop-blur-sm">
-              <span className="relative flex h-2 w-2 mr-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C0C0C0] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C0C0C0]"></span>
-              </span>
-              Limited Seats Available for First Global Batch
-            </span>
-          </motion.div> */}
-
+        
           <motion.h1
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-6 sm:mb-8 leading-tight"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <span className="block text-white mb-2 sm:mb-3">
+            <span className="block text-[#C0C0C0] mt-2 sm:mb-3 ">
              Best Town Global Associates :
             </span>
-            <span className="block">Your Gateway to</span>
+            <span className="block text-[#C0C0C0]">Your Gateway to</span>
             <span className="block mt-2 relative">
               <span className="relative inline-block">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] animate-shimmer bg-[length:200%_100%]">
