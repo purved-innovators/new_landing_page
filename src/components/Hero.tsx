@@ -1,14 +1,14 @@
-import { ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 interface HeroProps {
   onGetStarted: () => void;
 }
 
 export default function Hero({ onGetStarted }: HeroProps) {
-  const [displayText, setDisplayText] = useState('');
-  const fullText = 'Dubai Real Estate Market';
+  const [displayText, setDisplayText] = useState("");
+  const fullText = "Dubai Real Estate Market";
   const [isTypingComplete, setIsTypingComplete] = useState(false);
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
         setDisplayText(fullText.slice(0, currentIndex));
         currentIndex++;
       } else {
-        setIsTypingComplete(true);  
+        setIsTypingComplete(true);
         clearInterval(typingInterval);
       }
     }, 80);
@@ -27,9 +27,10 @@ export default function Hero({ onGetStarted }: HeroProps) {
   }, []);
 
   return (
-    <section className="relative bg-gradient-to-br from-black via-[#1a1a1a] to-[#111111] text-white overflow-hidden min-h-screen flex items-center">
-<div className="absolute inset-0  bg-[url('https://plus.unsplash.com/premium_photo-1762323998313-5490d2d13fda?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687')]
-  sm:bg-[url('https://plus.unsplash.com/premium_photo-1670185511068-d2d5803f1769?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1169')] bg-cover bg-center opacity-50"></div>
+    <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-black] text-white overflow-hidden min-h-screen flex items-center">
+      <div
+        className="absolute inset-0  bg-cover bg-center opacity-50"
+      ></div>
 
       <motion.div
         className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#C0C0C0] to-transparent"
@@ -62,7 +63,6 @@ export default function Hero({ onGetStarted }: HeroProps) {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 w-full">
         <div className="text-center max-w-5xl mx-auto">
-        
           <motion.h1
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight mb-6 sm:mb-8 leading-tight"
             initial={{ opacity: 0, y: 20 }}
@@ -70,7 +70,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <span className="block text-[#C0C0C0] mt-2 sm:mb-3 ">
-             Best Town Global Associates
+              Best Town Global Associates
             </span>
             <span className="block text-[#C0C0C0]">Your Gateway to</span>
             <span className="block mt-2 relative">
@@ -95,9 +95,13 @@ export default function Hero({ onGetStarted }: HeroProps) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            Unlock Dubai's Prestigious Real Estate Market: Receive Direct{' '}
-            <span className="text-[#e3e3e3] font-semibold">CEO Mentorship</span>, Tap Into{' '}
-            <span className="text-[#e3e3e3] font-semibold">Industry-Leading Commission Structures</span>, and Network with Top Professionals Across{' '}
+            Unlock Dubai's Prestigious Real Estate Market: Receive Direct{" "}
+            <span className="text-[#e3e3e3] font-semibold">CEO Mentorship</span>
+            , Tap Into{" "}
+            <span className="text-[#e3e3e3] font-semibold">
+              Industry-Leading Commission Structures
+            </span>
+            , and Network with Top Professionals Across{" "}
             <span className="text-[#e3e3e3] font-semibold">60+ Countries</span>.
           </motion.p>
 
