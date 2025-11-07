@@ -70,7 +70,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <span className="block text-[#C0C0C0] mt-2 sm:mb-3 ">
-             Best Town Global Associates :
+             Best Town Global Associates
             </span>
             <span className="block text-[#C0C0C0]">Your Gateway to</span>
             <span className="block mt-2 relative">
