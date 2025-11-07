@@ -28,7 +28,8 @@ export default function Hero({ onGetStarted }: HeroProps) {
 
   return (
     <section className="relative bg-gradient-to-br from-black via-[#1a1a1a] to-[#111111] text-white overflow-hidden min-h-screen flex items-center">
-<div className="absolute inset-0 bg-[url('/img3.jpg')] bg-cover bg-center opacity-50"></div>
+<div className="absolute inset-0  bg-[url('https://plus.unsplash.com/premium_photo-1762323998313-5490d2d13fda?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=687')]
+  sm:bg-[url('https://plus.unsplash.com/premium_photo-1670185511068-d2d5803f1769?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1169')] bg-cover bg-center opacity-50"></div>
 
       <motion.div
         className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#C0C0C0] to-transparent"

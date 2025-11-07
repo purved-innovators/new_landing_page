@@ -129,12 +129,13 @@ export default function ProgramDetails() {
                 {/* Buttons Section */}
                 <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                   <motion.button
+                  
                     className="flex items-center justify-center gap-3 bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] text-slate-900 font-semibold py-3 sm:py-4 px-6 sm:px-8 rounded-xl hover:shadow-lg hover:shadow-[#C0C0C0]/30 transition-all duration-300 group flex-1"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span className="text-sm sm:text-base">Company Profile</span>
+                    <a href="/public/Bestown_company_profile.pdf" download><span  className="text-sm sm:text-base">Company Profile</span></a>
                   </motion.button>
                   
                   <motion.button
@@ -143,7 +144,7 @@ export default function ProgramDetails() {
                     whileTap={{ scale: 0.98 }}
                   >
                     <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <span className="text-sm sm:text-base">View Now</span>
+                    <a href="/public/Bestown_company_profile.pdf"><span className="text-sm sm:text-base">View Now</span></a>
                   </motion.button>
                 </div>
               </div>
