@@ -18,7 +18,7 @@ export default function Hero({ onGetStarted }: HeroProps) {
         setDisplayText(fullText.slice(0, currentIndex));
         currentIndex++;
       } else {
-        setIsTypingComplete(true);
+        setIsTypingComplete(true);  
         clearInterval(typingInterval);
       }
     }, 80);

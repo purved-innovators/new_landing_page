@@ -135,7 +135,7 @@ export default function ProgramDetails() {
                     whileTap={{ scale: 0.98 }}
                   >
                     <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <a href="/public/Bestown_company_profile.pdf" download><span  className="text-sm sm:text-base">Company Profile</span></a>
+                    <a href="/Bestown_company_profile.pdf" download><span  className="text-sm sm:text-base">Company Profile</span></a>
                   </motion.button>
                   
                   <motion.button
@@ -144,7 +144,7 @@ export default function ProgramDetails() {
                     whileTap={{ scale: 0.98 }}
                   >
                     <Eye className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <a href="/public/Bestown_company_profile.pdf"><span className="text-sm sm:text-base">View Now</span></a>
+                    <a href="/Bestown_company_profile.pdf"><span className="text-sm sm:text-base">View Now</span></a>
                   </motion.button>
                 </div>
               </div>
