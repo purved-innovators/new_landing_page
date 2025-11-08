@@ -27,10 +27,11 @@ export default function Hero({ onGetStarted }: HeroProps) {
   }, []);
 
   return (
-    <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-black] text-white overflow-hidden min-h-screen flex items-center">
-      <div
-        className="absolute inset-0  bg-cover bg-center opacity-50"
-      ></div>
+    <section className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-black text-white overflow-hidden min-h-screen flex items-center">
+
+<div
+  className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1555058684-d5a76aa1a1fa?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1074')] opacity-10  bg-cover bg-center bg-no-repeat"
+></div>
 
       <motion.div
         className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#C0C0C0] to-transparent"
