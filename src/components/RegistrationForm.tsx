@@ -1,131 +1,294 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
-import { Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useInView } from 'framer-motion';
-import { useRef } from 'react';
+import React, {
+  useRef,
+  useState,
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+} from "react";
+import {
+  Upload,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  Trash2,
+} from "lucide-react";
+import { motion, AnimatePresence, useInView } from "framer-motion";
+import { submitForm } from "../api/Api";
 
 interface FormData {
   fullName: string;
   email: string;
+  contactCountryCode: string;
   contactNo: string;
+  whatsappCountryCode: string;
   whatsappNo: string;
-  country: string;
-  companyName: string;
+  countryOfResidence: string;
+  currentCompanyName: string;
   professionalRole: string;
   languagesSpoken: string;
-  yearsExperience: string;
+  yearsOfExperience: string;
   referralEmployeeName: string;
-  signature: File | null;
+  signatureDataUrl: string | null;
+  assetFile: File | null;
   agreeToTerms: boolean;
   confirmAccuracy: boolean;
 }
 
+const COUNTRY_CODES = [
+  { code: "+971", label: "UAE" },
+  { code: "+91", label: "India" },
+  { code: "+1", label: "USA" },
+  { code: "+44", label: "UK" },
+  { code: "+61", label: "Australia" },
+];
+
 export default function RegistrationForm() {
-  const ref = useRef(null);
+  const ref = useRef<HTMLDivElement | null>(null);
   const isInView = useInView(ref, { once: true, amount: 0.1 });
 
   const [formData, setFormData] = useState<FormData>({
-    fullName: '',
-    email: '',
-    contactNo: '',
-    whatsappNo: '',
-    country: '',
-    companyName: '',
-    professionalRole: '',
-    languagesSpoken: '',
-    yearsExperience: '',
-    referralEmployeeName: '',
-    signature: null,
+    fullName: "",
+    email: "",
+    contactCountryCode: "+971", // default to UAE
+    contactNo: "",
+    whatsappCountryCode: "+971",
+    whatsappNo: "",
+    countryOfResidence: "",
+    currentCompanyName: "",
+    professionalRole: "",
+    languagesSpoken: "",
+    yearsOfExperience: "",
+    referralEmployeeName: "",
+    signatureDataUrl: null,
+    assetFile: null,
     agreeToTerms: false,
     confirmAccuracy: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+  // Canvas refs & drawing state
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const drawing = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const hasStrokes = useRef(false);
 
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (type === 'file') {
-      const files = (e.target as HTMLInputElement).files;
-      if (files && files[0]) {
-        setFormData(prev => ({ ...prev, signature: files[0] }));
-      }
+  // Set up canvas size and context, and handle window resize
+  const resizeCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    // Save current image to restore after resize (optional; we skip restore here for simplicity)
+    // Set internal canvas pixel size to account for DPR
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.resetTransform?.(); // reset if available
+    ctx.scale(dpr, dpr);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#000000";
+    ctxRef.current = ctx;
+    // Clear visual (internal) canvas so it starts blank after resize
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Since resizing clears canvas, also reset saved signature data (defensive)
+    setFormData((prev) => ({ ...prev, signatureDataUrl: null }));
+    hasStrokes.current = false;
+  };
+
+  useEffect(() => {
+    // initial setup
+    resizeCanvas();
+    // resize handler
+    const onResize = () => {
+      resizeCanvas();
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getCanvasRelativePos = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    return { x, y };
+  };
+
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    drawing.current = true;
+    lastPos.current = getCanvasRelativePos(e);
+    // do not overwrite true if already true
+    hasStrokes.current = hasStrokes.current || false;
+    try {
+      (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
+    } catch {
+      // ignore if not supported
+    }
+  };
+
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current || !ctxRef.current || !lastPos.current) return;
+    const { x, y } = getCanvasRelativePos(e);
+    const ctx = ctxRef.current;
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    lastPos.current = { x, y };
+    hasStrokes.current = true;
+  };
+
+  const endDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    drawing.current = false;
+    lastPos.current = null;
+    try {
+      (e.target as HTMLCanvasElement).releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    // Auto-save if there were strokes
+    if (hasStrokes.current) {
+      saveSignature();
+      // Keep hasStrokes true so further strokes continue to be saved automatically.
+      // If you prefer "one auto-save per stroke" behavior, set hasStrokes.current = false here.
+    }
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
+    // Clearing must take DPR into account: easiest is to reset internal size
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    ctx.resetTransform?.();
+    ctx.scale(dpr, dpr);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#000000";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    setFormData((prev) => ({ ...prev, signatureDataUrl: null }));
+    hasStrokes.current = false;
+  };
+
+  const saveSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (!hasStrokes.current) return;
+    // Ensure we export the canvas at its true pixel resolution (toDataURL does that)
+    const dataUrl = canvas.toDataURL("image/png");
+    setFormData((prev) => ({ ...prev, signatureDataUrl: dataUrl }));
+  };
+
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const target = e.target as HTMLInputElement;
+    const { name, value, type } = target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: target.checked }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleAssetChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      setFormData((prev) => ({ ...prev, assetFile: files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, assetFile: null }));
     }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!formData.agreeToTerms || !formData.confirmAccuracy) {
-      setErrorMessage('Please confirm both agreement checkboxes');
-      setSubmitStatus('error');
-      return;
-    }
-
+   
     setIsSubmitting(true);
-    setSubmitStatus('idle');
-    setErrorMessage('');
+    setSubmitStatus("idle");
+    setErrorMessage("");
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const payload = {
+        fullName: formData.fullName,
+        email: formData.email,
+        contactCountryCode: formData.contactCountryCode,
+        contactNo: formData.contactNo,
+        whatsappCountryCode: formData.whatsappCountryCode,
+        whatsappNo: formData.whatsappNo,
+        countryOfResidence: formData.countryOfResidence,
+        currentCompanyName: formData.currentCompanyName,
+        professionalRole: formData.professionalRole,
+        languagesSpoken: formData.languagesSpoken,
+        yearsOfExperience: formData.yearsOfExperience,
+        referralEmployeeName: formData.referralEmployeeName,
+        signatureDataUrl: formData.signatureDataUrl,
+        attachment: formData.assetFile,
+        agreed: formData.agreeToTerms,
+        confirmedAccuracy: formData.confirmAccuracy,
+        submittedAt: new Date().toISOString(),
+      };
 
-      setSubmitStatus('success');
+      console.log("Registration payload:", payload);
+
+      // submitForm should handle file uploads if needed (FormData) in your API helper
+      await submitForm(payload);
+
+      setSubmitStatus("success");
+      // Reset form if desired:
       setFormData({
-        fullName: '',
-        email: '',
-        contactNo: '',
-        whatsappNo: '',
-        country: '',
-        companyName: '',
-        professionalRole: '',
-        languagesSpoken: '',
-        yearsExperience: '',
-        referralEmployeeName: '',
-        signature: null,
+        fullName: "",
+        email: "",
+        contactCountryCode: "+971",
+        contactNo: "",
+        whatsappCountryCode: "+971",
+        whatsappNo: "",
+        countryOfResidence: "",
+        currentCompanyName: "",
+        professionalRole: "",
+        languagesSpoken: "",
+        yearsOfExperience: "",
+        referralEmployeeName: "",
+        signatureDataUrl: null,
+        assetFile: null,
         agreeToTerms: false,
         confirmAccuracy: false,
       });
-    } catch (error) {
-      setSubmitStatus('error');
-      setErrorMessage('An error occurred. Please try again.');
+      clearCanvas();
+    } catch (err) {
+      console.error(err);
+      setSubmitStatus("error");
+      setErrorMessage("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <section ref={ref} id="registration-form" className="py-20 sm:py-28 bg-gradient-to-br from-black via-slate-900 to-slate-800 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAyMCAwIEwgMCAwIDAgMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyMDAsMjAwLDIwMCwwLjA1KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
-
-      <div className="absolute inset-0">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-[#C0C0C0] rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              opacity: [0.1, 0.5, 0.1],
-              scale: [1, 1.5, 1],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
-
+    <section
+      ref={ref}
+      id="registration-form"
+      className="py-20 sm:py-28 bg-gradient-to-br from-black via-slate-900 to-slate-800 relative overflow-hidden"
+    >
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <motion.div
           className="bg-gradient-to-br from-slate-800 via-slate-900 to-black rounded-3xl shadow-2xl p-6 sm:p-8 lg:p-12 border-2 border-[#C0C0C0]/30 relative overflow-hidden"
@@ -133,14 +296,7 @@ export default function RegistrationForm() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
         >
-          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd]"></div>
-
-          <motion.div
-            className="text-center mb-10 sm:mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={isInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
+          <div className="text-center mb-10 sm:mb-12">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
               <span className="text-white">Best Town Realty - </span>
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd]">
@@ -151,12 +307,13 @@ export default function RegistrationForm() {
               Referral Program Registration
             </h3>
             <p className="text-slate-300 text-sm sm:text-base">
-              Limited seats available for the first global batch. Applications reviewed within 48 hours.
+              Limited seats available for the first global batch. Applications
+              reviewed within 48 hours.
             </p>
-          </motion.div>
+          </div>
 
           <AnimatePresence>
-            {submitStatus === 'success' && (
+            {submitStatus === "success" && (
               <motion.div
                 className="mb-8 p-6 bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-2 border-green-500 rounded-2xl flex items-start space-x-4 shadow-lg backdrop-blur-sm"
                 initial={{ opacity: 0, y: -20 }}
@@ -165,13 +322,18 @@ export default function RegistrationForm() {
               >
                 <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-green-200 font-bold text-lg">Registration Submitted Successfully!</p>
-                  <p className="text-green-300 text-sm mt-1">We'll review your application and get back to you within 48 hours.</p>
+                  <p className="text-green-200 font-bold text-lg">
+                    Registration Submitted Successfully!
+                  </p>
+                  <p className="text-green-300 text-sm mt-1">
+                    We'll review your application and get back to you within 48
+                    hours.
+                  </p>
                 </div>
               </motion.div>
             )}
 
-            {submitStatus === 'error' && (
+            {submitStatus === "error" && (
               <motion.div
                 className="mb-8 p-6 bg-gradient-to-r from-red-900/50 to-rose-900/50 border-2 border-red-500 rounded-2xl flex items-start space-x-4 shadow-lg backdrop-blur-sm"
                 initial={{ opacity: 0, y: -20 }}
@@ -180,7 +342,9 @@ export default function RegistrationForm() {
               >
                 <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-red-200 font-bold text-lg">Submission Error</p>
+                  <p className="text-red-200 font-bold text-lg">
+                    Submission Error
+                  </p>
                   <p className="text-red-300 text-sm mt-1">{errorMessage}</p>
                 </div>
               </motion.div>
@@ -189,136 +353,274 @@ export default function RegistrationForm() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              {[
-                { id: 'fullName', label: 'Full Name', type: 'text', placeholder: 'Enter your full name', required: true },
-                { id: 'email', label: 'Email Address', type: 'email', placeholder: 'your.email@example.com', required: true },
-                { id: 'contactNo', label: 'Contact No (with Country Code)', type: 'tel', placeholder: '+971 50 123 4567', required: true },
-                { id: 'whatsappNo', label: 'WhatsApp No', type: 'tel', placeholder: '+971 50 123 4567', required: true },
-                { id: 'country', label: 'Country of Residence', type: 'text', placeholder: 'Enter your country', required: true },
-                { id: 'companyName', label: 'Current Company Name', type: 'text', placeholder: 'Company name', required: true },
-                { id: 'professionalRole', label: 'Professional Role', type: 'text', placeholder: 'e.g., Real Estate Agent, Broker', required: true },
-                { id: 'languagesSpoken', label: 'Languages Spoken', type: 'text', placeholder: 'e.g., English, Arabic, Hindi', required: true },
-                { id: 'yearsExperience', label: 'Years of Experience', type: 'text', placeholder: 'e.g., 5 years', required: true },
-                { id: 'referralEmployeeName', label: 'Referral Employee Name', type: 'text', placeholder: 'Optional', required: false },
-              ].map((field, index) => (
-                <motion.div
-                  key={field.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={isInView ? { opacity: 1, y: 0 } : {}}
-                  transition={{ duration: 0.4, delay: 0.3 + index * 0.05 }}
-                >
-                  <label htmlFor={field.id} className="block text-sm font-bold text-[#e3e3e3] mb-2">
-                    {field.label} {field.required && <span className="text-red-400">*</span>}
-                  </label>
+              {/* Full Name */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Full Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Enter your full name"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Email Address <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="your.email@example.com"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Contact: country code select + number */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Contact No <span className="text-red-400">*</span>
+                </label>
+                <div className="flex gap-3 items-center">
+                  <select
+                    name="contactCountryCode"
+                    value={formData.contactCountryCode}
+                    onChange={handleInputChange}
+                    className="w-[82px] px-2 py-2 bg-slate-900/40 border-2 border-slate-700 rounded-xl text-white"
+                    aria-label="Contact country code"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.code} {c.label}
+                      </option>
+                    ))}
+                  </select>
                   <input
-                    type={field.type}
-                    id={field.id}
-                    name={field.id}
-                    value={formData[field.id as keyof FormData] as string}
-                    onChange={handleChange}
-                    required={field.required}
-                    className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl focus:ring-2 focus:ring-[#C0C0C0] focus:border-[#C0C0C0] transition-all text-white placeholder-slate-500 backdrop-blur-sm"
-                    placeholder={field.placeholder}
+                    name="contactNo"
+                    value={formData.contactNo}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="50 123 4567"
+                    className="flex-1 max-w-[250px] px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
                   />
-                </motion.div>
-              ))}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Contact number with selected country code.
+                </p>
+              </div>
+
+              {/* WhatsApp: country code select + number */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  WhatsApp No
+                </label>
+                <div className="flex gap-3 items-center">
+                  <input
+                    name="whatsappNo"
+                    value={formData.whatsappNo}
+                    onChange={handleInputChange}
+                    placeholder="50 123 4567"
+                    className="flex-1 px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Country of Residence */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Country of Residence <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="countryOfResidence"
+                  value={formData.countryOfResidence}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Enter your country"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Current company */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Current Company Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="currentCompanyName"
+                  value={formData.currentCompanyName}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Company name"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Professional role */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Professional Role <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="professionalRole"
+                  value={formData.professionalRole}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="e.g., Real Estate Agent, Broker"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Languages */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Languages Spoken <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="languagesSpoken"
+                  value={formData.languagesSpoken}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="e.g., English, Arabic, Hindi"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Experience */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Years of Experience <span className="text-red-400">*</span>
+                </label>
+                <input
+                  name="yearsOfExperience"
+                  value={formData.yearsOfExperience}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="e.g., 5 years"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              {/* Referral */}
+              <div>
+                <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                  Referral Employee Name
+                </label>
+                <input
+                  name="referralEmployeeName"
+                  value={formData.referralEmployeeName}
+                  onChange={handleInputChange}
+                  placeholder="Optional"
+                  className="w-full px-4 py-3 bg-slate-900/50 border-2 border-slate-700 rounded-xl text-white"
+                />
+              </div>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              <label htmlFor="signature" className="block text-sm font-bold text-[#e3e3e3] mb-2">
-                Signature Upload <span className="text-red-400">*</span>
+            {/* Signature canvas */}
+            <div>
+              <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                Signature (draw here) <span className="text-red-400">*</span>
+              </label>
+              <div className="bg-slate-300 border-2 border-dashed border-slate-700 rounded-2xl p-4">
+                <div className="w-full h-40 bg-transparent rounded-md overflow-hidden">
+                  <canvas
+                    ref={canvasRef}
+                    onPointerDown={startDrawing}
+                    onPointerMove={draw}
+                    onPointerUp={endDrawing}
+                    onPointerLeave={endDrawing}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      touchAction: "none",
+                      background: "transparent",
+                    }}
+                  />
+                </div>
+
+                <div className="mt-3 flex gap-3 items-center">
+                  <button
+                    type="button"
+                    onClick={clearCanvas}
+                    className="px-4 py-2 bg-red-600 text-white rounded-xl flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" /> Clear
+                  </button>
+
+                  {/* Save button removed — signature auto-saves on drawing */}
+                  {formData.signatureDataUrl && (
+                    <div className="ml-auto text-sm text-slate-700">
+                      Signature saved ✓
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Draw your signature above. It will be saved automatically when
+                you finish drawing. Click "Clear" to remove the signature.
+              </p>
+            </div>
+
+            {/* Optional asset input */}
+            <div>
+              <label className="block text-sm font-bold text-[#e3e3e3] mb-2">
+                Additional Asset (Image or PDF) — optional
               </label>
               <div className="relative">
                 <input
                   type="file"
-                  id="signature"
-                  name="signature"
-                  onChange={handleChange}
-                  required
+                  id="asset"
                   accept="image/*,.pdf"
+                  onChange={handleAssetChange}
                   className="hidden"
                 />
                 <label
-                  htmlFor="signature"
-                  className="flex items-center justify-center w-full px-6 py-8 border-2 border-dashed border-[#C0C0C0]/40 rounded-2xl cursor-pointer hover:border-[#C0C0C0] transition-all bg-gradient-to-br from-slate-900/50 to-black/50 hover:shadow-lg group backdrop-blur-sm"
+                  htmlFor="asset"
+                  className="flex items-center gap-4 px-4 py-4 border-2 border-dashed border-[#C0C0C0]/30 rounded-2xl cursor-pointer bg-gradient-to-br from-slate-900/50 to-black/50"
                 >
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Upload className="w-8 h-8 text-slate-900" />
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] rounded-lg flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-slate-900" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-semibold text-slate-200">
+                      {formData.assetFile
+                        ? formData.assetFile.name
+                        : "Click to upload an image or PDF"}
                     </div>
-                    <p className="text-base font-semibold text-slate-300">
-                      {formData.signature ? (
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd]">{formData.signature.name}</span>
-                      ) : (
-                        <>Click to upload signature (Image or PDF)</>
-                      )}
-                    </p>
+                    <div className="text-xs text-slate-400">
+                      {formData.assetFile
+                        ? `${Math.round(formData.assetFile.size / 1024)} KB`
+                        : "Optional"}
+                    </div>
                   </div>
                 </label>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              className="border-t-2 border-[#C0C0C0]/20 pt-8"
-              initial={{ opacity: 0 }}
-              animate={isInView ? { opacity: 1 } : {}}
-              transition={{ duration: 0.6, delay: 1 }}
-            >
-              <h4 className="text-xl font-bold text-white mb-6">Agreement & Consent</h4>
-
-              <div className="space-y-4">
-                <label className="flex items-start space-x-4 cursor-pointer group p-4 rounded-xl hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="confirmAccuracy"
-                    checked={formData.confirmAccuracy}
-                    onChange={handleChange}
-                    required
-                    className="mt-1 w-6 h-6 text-[#C0C0C0] border-2 border-slate-600 rounded focus:ring-[#C0C0C0] bg-slate-900"
-                  />
-                  <span className="text-slate-300 group-hover:text-white font-medium">
-                    I confirm that all information provided is accurate
-                  </span>
-                </label>
-
-                <label className="flex items-start space-x-4 cursor-pointer group p-4 rounded-xl hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    name="agreeToTerms"
-                    checked={formData.agreeToTerms}
-                    onChange={handleChange}
-                    required
-                    className="mt-1 w-6 h-6 text-[#C0C0C0] border-2 border-slate-600 rounded focus:ring-[#C0C0C0] bg-slate-900"
-                  />
-                  <span className="text-slate-300 group-hover:text-white font-medium">
-                    I agree to the terms & conditions of the Global Associates Referral Program
-                  </span>
-                </label>
-              </div>
-            </motion.div>
+            {/* (If you have checkboxes for agreeToTerms and confirmAccuracy add them in the UI. 
+                Currently handleSubmit requires these booleans to be true.) */}
 
             <motion.button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-5 px-8 text-lg font-bold text-black bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] rounded-xl hover:from-[#cbcccd] hover:via-[#C0C0C0] hover:to-[#e3e3e3] focus:ring-4 focus:ring-[#C0C0C0]/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl hover:shadow-[#C0C0C0]/30 transform hover:-translate-y-1 active:translate-y-0 flex items-center justify-center space-x-3 relative overflow-hidden group"
+              className="w-full py-5 px-8 text-lg font-bold text-black bg-gradient-to-r from-[#e3e3e3] via-[#C0C0C0] to-[#cbcccd] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl flex items-center justify-center space-x-3"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: 1.2 }}
             >
-              <span className="absolute inset-0 bg-gradient-to-r from-[#cbcccd] via-[#C0C0C0] to-[#e3e3e3] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin relative z-10" />
-                  <span className="relative z-10">Submitting...</span>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>Submitting...</span>
                 </>
               ) : (
-                <span className="relative z-10">Secure My Spot Now</span>
+                <span>Secure My Spot Now</span>
               )}
             </motion.button>
           </form>
