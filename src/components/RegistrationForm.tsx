@@ -71,6 +71,25 @@ export default function RegistrationForm() {
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Toast/snackbar state (bottom-right)
+  const [toast, setToast] = useState<
+    { type: "success" | "error"; message: string } | null
+  >(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = (type: "success" | "error", message: string, ms = 4000) => {
+    // clear any existing timer
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToast({ type, message });
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, ms);
+  };
+
   // Canvas refs & drawing state
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -85,23 +104,19 @@ export default function RegistrationForm() {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
-    // Save current image to restore after resize (optional; we skip restore here for simplicity)
-    // Set internal canvas pixel size to account for DPR
     canvas.width = Math.max(1, Math.round(rect.width * dpr));
     canvas.height = Math.max(1, Math.round(rect.height * dpr));
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.resetTransform?.(); // reset if available
+    ctx.resetTransform?.();
     ctx.scale(dpr, dpr);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.lineWidth = 2.5;
     ctx.strokeStyle = "#000000";
     ctxRef.current = ctx;
-    // Clear visual (internal) canvas so it starts blank after resize
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Since resizing clears canvas, also reset saved signature data (defensive)
     setFormData((prev) => ({ ...prev, signatureDataUrl: null }));
     hasStrokes.current = false;
   };
@@ -109,13 +124,15 @@ export default function RegistrationForm() {
   useEffect(() => {
     // initial setup
     resizeCanvas();
-    // resize handler
     const onResize = () => {
       resizeCanvas();
     };
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -131,12 +148,11 @@ export default function RegistrationForm() {
   const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
     drawing.current = true;
     lastPos.current = getCanvasRelativePos(e);
-    // do not overwrite true if already true
     hasStrokes.current = hasStrokes.current || false;
     try {
       (e.target as HTMLCanvasElement).setPointerCapture(e.pointerId);
     } catch {
-      // ignore if not supported
+      // ignore
     }
   };
 
@@ -160,11 +176,8 @@ export default function RegistrationForm() {
     } catch {
       // ignore
     }
-    // Auto-save if there were strokes
     if (hasStrokes.current) {
       saveSignature();
-      // Keep hasStrokes true so further strokes continue to be saved automatically.
-      // If you prefer "one auto-save per stroke" behavior, set hasStrokes.current = false here.
     }
   };
 
@@ -172,7 +185,6 @@ export default function RegistrationForm() {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     if (!canvas || !ctx) return;
-    // Clearing must take DPR into account: easiest is to reset internal size
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.max(1, Math.round(rect.width * dpr));
@@ -193,7 +205,6 @@ export default function RegistrationForm() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (!hasStrokes.current) return;
-    // Ensure we export the canvas at its true pixel resolution (toDataURL does that)
     const dataUrl = canvas.toDataURL("image/png");
     setFormData((prev) => ({ ...prev, signatureDataUrl: dataUrl }));
   };
@@ -222,7 +233,6 @@ export default function RegistrationForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-   
     setIsSubmitting(true);
     setSubmitStatus("idle");
     setErrorMessage("");
@@ -248,36 +258,45 @@ export default function RegistrationForm() {
         submittedAt: new Date().toISOString(),
       };
 
-      console.log("Registration payload:", payload);
 
-      // submitForm should handle file uploads if needed (FormData) in your API helper
-      await submitForm(payload);
+      // Expect submitForm to return something like { ok: boolean, message?: string }
+      const res: any = await submitForm(payload);
 
-      setSubmitStatus("success");
-      // Reset form if desired:
-      setFormData({
-        fullName: "",
-        email: "",
-        contactCountryCode: "+971",
-        contactNo: "",
-        whatsappCountryCode: "+971",
-        whatsappNo: "",
-        countryOfResidence: "",
-        currentCompanyName: "",
-        professionalRole: "",
-        languagesSpoken: "",
-        yearsOfExperience: "",
-        referralEmployeeName: "",
-        signatureDataUrl: null,
-        assetFile: null,
-        agreeToTerms: false,
-        confirmAccuracy: false,
-      });
-      clearCanvas();
+      if (res && res.ok) {
+        setSubmitStatus("success");
+        showToast("success", res.message || "Registration submitted successfully.");
+        // Reset form if desired:
+        setFormData({
+          fullName: "",
+          email: "",
+          contactCountryCode: "+971",
+          contactNo: "",
+          whatsappCountryCode: "+971",
+          whatsappNo: "",
+          countryOfResidence: "",
+          currentCompanyName: "",
+          professionalRole: "",
+          languagesSpoken: "",
+          yearsOfExperience: "",
+          referralEmployeeName: "",
+          signatureDataUrl: null,
+          assetFile: null,
+          agreeToTerms: false,
+          confirmAccuracy: false,
+        });
+        clearCanvas();
+      } else {
+        setSubmitStatus("error");
+        
+        const message = (res && res.error) || "Submission failed. Please try again.";
+        setErrorMessage(message);
+        showToast("error", message);
+      }
     } catch (err) {
       console.error(err);
       setSubmitStatus("error");
       setErrorMessage("An error occurred. Please try again.");
+      showToast("error", "An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -312,44 +331,8 @@ export default function RegistrationForm() {
             </p>
           </div>
 
-          <AnimatePresence>
-            {submitStatus === "success" && (
-              <motion.div
-                className="mb-8 p-6 bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-2 border-green-500 rounded-2xl flex items-start space-x-4 shadow-lg backdrop-blur-sm"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-              >
-                <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-green-200 font-bold text-lg">
-                    Registration Submitted Successfully!
-                  </p>
-                  <p className="text-green-300 text-sm mt-1">
-                    We'll review your application and get back to you within 48
-                    hours.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {submitStatus === "error" && (
-              <motion.div
-                className="mb-8 p-6 bg-gradient-to-r from-red-900/50 to-rose-900/50 border-2 border-red-500 rounded-2xl flex items-start space-x-4 shadow-lg backdrop-blur-sm"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-              >
-                <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-red-200 font-bold text-lg">
-                    Submission Error
-                  </p>
-                  <p className="text-red-300 text-sm mt-1">{errorMessage}</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* NOTE: top-of-form success/error banners removed per request.
+              Feedback is shown via bottom-right snackbar (toast). */}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
@@ -554,7 +537,6 @@ export default function RegistrationForm() {
                     <Trash2 className="w-4 h-4" /> Clear
                   </button>
 
-                  {/* Save button removed — signature auto-saves on drawing */}
                   {formData.signatureDataUrl && (
                     <div className="ml-auto text-sm text-slate-700">
                       Signature saved ✓
@@ -604,9 +586,6 @@ export default function RegistrationForm() {
               </div>
             </div>
 
-            {/* (If you have checkboxes for agreeToTerms and confirmAccuracy add them in the UI. 
-                Currently handleSubmit requires these booleans to be true.) */}
-
             <motion.button
               type="submit"
               disabled={isSubmitting}
@@ -626,6 +605,54 @@ export default function RegistrationForm() {
           </form>
         </motion.div>
       </div>
+
+      {/* Toast / Snackbar (bottom-right) */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+            transition={{ duration: 0.18 }}
+            style={{ position: "fixed", right: 24, bottom: 24, zIndex: 60 }}
+          >
+            <div
+              className={`max-w-sm w-full rounded-2xl p-4 shadow-xl flex items-start gap-3 ${
+                toast.type === "success"
+                  ? "bg-gradient-to-r from-green-900/80 to-emerald-900/80 border-2 border-green-500 text-green-50"
+                  : "bg-gradient-to-r from-red-900/80 to-rose-900/80 border-2 border-red-500 text-red-50"
+              }`}
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                {toast.type === "success" ? (
+                  <CheckCircle className="w-6 h-6 text-green-200" />
+                ) : (
+                  <AlertCircle className="w-6 h-6 text-red-200" />
+                )}
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold">
+                  {toast.type === "success" ? "Success" : "Error"}
+                </div>
+                <div className="text-sm mt-1">{toast.message}</div>
+              </div>
+              <button
+                onClick={() => {
+                  if (toastTimerRef.current) {
+                    window.clearTimeout(toastTimerRef.current);
+                    toastTimerRef.current = null;
+                  }
+                  setToast(null);
+                }}
+                className="ml-3 text-xs opacity-80"
+                aria-label="close toast"
+              >
+                Dismiss
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

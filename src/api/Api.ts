@@ -7,6 +7,7 @@ const submitForm = async (data: any) => {
         "Content-Type": "multipart/form-data",
       },
     });
+    return res.data
   } catch (error) {
     console.error(error);
   }
